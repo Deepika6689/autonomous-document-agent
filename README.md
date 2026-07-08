@@ -138,72 +138,46 @@ Switching providers requires no code changes.
 
 # Architecture
 
-```text
-POST /agent {"request":"..."}
-
+```
+POST /agent {"request": "..."}
         │
         ▼
-
-① planner.py
-   Generates:
-   - Document type
-   - Assumptions
-   - Execution plan
-   - Section structure
-
+ ① planner.py        LLM decides: document_type, assumptions (for
+                      ambiguous asks), its OWN step-by-step plan, and
+                      the document's section list. No hardcoded template
+                      per document type.
         │
         ▼
-
-② executor.py
-   Tool Selection
-
-   For each step requiring external information,
-   the LLM dynamically selects the most suitable tool.
-
+ ② executor.py        For each plan step marked needs_tool=True, a
+    (tool calling)     dedicated LLM call PICKS which tool to invoke from
+                       the registry (tools.py) and with what arguments —
+                       the agent decides this at runtime, it isn't
+                       hardcoded per request type. Results are folded
+                       into shared context.
         │
         ▼
-
-③ executor.py
-   Content Generation
-
-   Generates document sections using:
-   - User request
-   - Assumptions
-   - Tool outputs
-
+ ③ executor.py        Each planned section is drafted by the LLM using
+    (drafting)         the original request + assumptions + gathered
+                       tool context.
         │
         ▼
-
-④ executor.py
-   Reflection / Self Check
-
-   Reviews generated content
-   against original requirements.
-
+ ④ executor.py        Self-check pass: LLM compares the draft against the
+    (reflection)       original request and flags anything missing
+                       (logged in the response for transparency).
         │
         ▼
-
-⑤ docx_builder.py
-
-   Creates polished DOCX file:
-   - Title page
-   - Assumptions section
-   - Structured content
-
+ ⑤ docx_builder.py    python-docx assembles a title page, an "Assumptions
+                       Made by the Agent" box, and each section (headings,
+                       paragraphs, bullets, tables) into a polished .docx.
         │
         ▼
-
-Response:
-- Plan
-- Assumptions
-- Tool usage log
-- Self-check results
-- Download URL
+ Response: plan, assumptions, tool call log, self-check result,
+           and a /download/{filename} link for the generated Word doc.
 ```
 
 ---
 
-# Assignment Requirement Implemented
+# Requirement Implemented
 
 ## Mandatory Engineering Improvement
 
@@ -502,4 +476,4 @@ outputs/
 
 Deepika
 
-Python AI Engineer – Autonomous Agents Assignment
+Python AI Engineer – Autonomous Agents 
